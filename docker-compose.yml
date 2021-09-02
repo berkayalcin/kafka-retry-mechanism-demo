@@ -1,0 +1,213 @@
+version: "3.9"
+services:
+  couchbase1:
+    tty: true
+    stdin_open: true
+    container_name: couchbase1
+    image: couchbase/server
+    restart: always
+    volumes:
+      - couchbase1-data:/data/couchbase1
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.34
+    ports:
+      - "8091:8091"
+      - "8092:8092"
+      - "8093:8093"
+      - "8094:8094"
+      - "11210:11210"
+    ulimits:
+      nproc: 65535
+      core:
+        soft: 100000000
+        hard: 100000000
+      memlock:
+        soft: 100000000
+        hard: 100000000
+      nofile:
+        soft: 40960
+        hard: 40960
+  couchbase2:
+    tty: true
+    stdin_open: true
+    restart: always
+    container_name: couchbase2
+    image: couchbase/server
+    volumes:
+      - couchbase2-data:/data/couchbase2
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.33
+    links:
+      - couchbase1
+    depends_on:
+      - couchbase1
+    ports:
+      - "18091:8091"
+      - "18092:8092"
+      - "18093:8093"
+      - "18094:8094"
+      - "21210:11210"
+  couchbase3:
+    tty: true
+    stdin_open: true
+    restart: always
+    container_name: couchbase3
+    image: couchbase/server
+    volumes:
+      - couchbase3-data:/data/couchbase3
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.32
+    links:
+      - couchbase2
+    depends_on:
+      - couchbase2
+    ports:
+      - "28091:8091"
+      - "28092:8092"
+      - "28093:8093"
+      - "28094:8094"
+      - "31210:11210"
+    ulimits:
+      nproc: 65535
+      core:
+        soft: 100000000
+        hard: 100000000
+      memlock:
+        soft: 100000000
+        hard: 100000000
+      nofile:
+        soft: 40960
+        hard: 40960
+  consul:
+    image: consul
+    restart: always
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    expose:
+      - "8500"
+    command: agent -server -bootstrap -ui -client=0.0.0.0
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.13
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=es-docker-cluster
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - data01:/data/elasticsearch
+    ports:
+      - 9200:9200
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.26
+  kib01:
+    depends_on:
+      - es01
+    image: docker.elastic.co/kibana/kibana:7.10.2
+    container_name: kib01
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSEARCH_URL: http://es01:9200
+      ELASTICSEARCH_HOSTS: http://es01:9200
+    networks:
+      - twitter-network
+  postgres:
+    restart: always
+    image: postgres
+    container_name: postgres_1
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-someadvancedpassword}
+      PGDATA: /data/postgres
+    volumes:
+      - postgres:/data/postgres
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.27
+    ports:
+      - 5432:5432
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin:/root/.pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.28
+    restart: unless-stopped
+  redis-server:
+    image: "redis:alpine"
+    command: redis-server
+    ports:
+      - "6379:6379"
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.29
+  zookeeper-1:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - 22181:2181
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.40
+  
+  kafka-1:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper-1
+    ports:
+      - 29092:29092
+    networks:
+      twitter-network:
+        ipv4_address: 172.16.101.42
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-1:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+networks:
+  twitter-network:
+    name: twitter-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.101.0/24
+volumes:
+  postgres:
+  sqlserver:
+  pgadmin:
+  couchbase1-data:
+  couchbase2-data:
+  couchbase3-data:
+  data01:
+    driver: local
+  data02:
+    driver: local
+  data03:
+    driver: local
