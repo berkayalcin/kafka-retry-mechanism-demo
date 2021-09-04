@@ -42,6 +42,9 @@ public class SendEmailConsumer {
     public void retry(@Payload String event) {
         final var objectMapper = new ObjectMapper();
         final var emailOutboxItem = objectMapper.readValue(event, EmailOutboxItem.class);
-        System.out.println(emailOutboxItem.toString());
+        if (emailOutboxItem.getId() % 2 == 0) {
+            throw new Exception("test exception to retry");
+        }
+        System.out.println(emailOutboxItem);
     }
 }

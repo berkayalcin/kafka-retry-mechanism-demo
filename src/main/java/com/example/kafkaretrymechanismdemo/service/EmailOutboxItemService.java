@@ -23,7 +23,7 @@ public class EmailOutboxItemService {
     public void process() {
         final var optionalEmailOutboxItem = emailOutboxItemRepository.findFirstBySendDateIsLessThanEqualAndStatusInOrderByOrderDesc(
                 DateTime.now().toDate(),
-                List.of(EmailOutboxItemStatus.CREATED)
+                List.of(EmailOutboxItemStatus.CREATED, EmailOutboxItemStatus.HAS_RETRYABLE_ERROR)
         );
 
         if (optionalEmailOutboxItem.isEmpty())

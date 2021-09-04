@@ -67,7 +67,7 @@ public class KafkaConsumerConfig {
         factory.setRetryTemplate(retryTemplate());
         factory.setRecoveryCallback(context -> {
             final ConsumerRecord record = (ConsumerRecord) context.getAttribute(CONTEXT_RECORD);
-            final var errorTopic = record.topic().replace("_RETRY", "_ERROR");
+            final var errorTopic = record.topic().replace(".RETRY", ".ERROR");
             kafkaTemplate.send(errorTopic, record.key().toString(), record.value().toString());
             return Optional.empty();
         });
@@ -75,7 +75,7 @@ public class KafkaConsumerConfig {
         return factory;
     }
 
-    @Bean
+
     public RetryTemplate retryTemplate() {
         final var retryTemplate = new RetryTemplate();
 
