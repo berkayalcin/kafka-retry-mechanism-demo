@@ -1,11 +1,9 @@
 package com.example.kafkaretrymechanismdemo.service;
 
 import com.example.kafkaretrymechanismdemo.constant.KafkaConstants;
-import com.example.kafkaretrymechanismdemo.entity.EmailOutboxItem;
 import com.example.kafkaretrymechanismdemo.enums.EmailOutboxItemStatus;
 import com.example.kafkaretrymechanismdemo.producer.KafkaProducer;
 import com.example.kafkaretrymechanismdemo.repository.EmailOutboxItemRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import org.joda.time.DateTime;
 import org.springframework.stereotype.Service;
